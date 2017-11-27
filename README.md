@@ -11,6 +11,9 @@ cp utsusemi.toml.sample utsusemi.toml
 make
 ./utsusemi
 ```
+```sh
+curl localhost:11080
+```
 
 ## Configuration
 
