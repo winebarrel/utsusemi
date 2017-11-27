@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 )
 
 type ResponseWriterWithCode struct {
@@ -69,16 +69,15 @@ func (server *Server) Run() (err error) {
 				break ScanLoop
 			}
 
-			resp, err := http.Head(singleJoiningSlash(url.String(), request.RequestURI))
+			preWriter := httptest.NewRecorder()
+			preRequest := httptest.NewRequest(http.MethodHead, request.RequestURI, request.Body)
+			preRequest.Host = url.Host
+			proxy.ServeHTTP(preWriter, preRequest)
 
-			if err != nil {
-				continue
-			}
-
-			server.Logger.Printf("%s -> %s %s %d", origInfo, "HEAD", url.Host, resp.StatusCode)
+			server.Logger.Printf("%s -> %s %s %d", origInfo, preRequest.Method, preRequest.Host, preWriter.Code)
 
 			for _, ok := range b.Ok {
-				if resp.StatusCode == ok {
+				if preWriter.Code == ok {
 					break ScanLoop
 				}
 			}
@@ -93,16 +92,4 @@ func (server *Server) Run() (err error) {
 	err = http.ListenAndServe(fmt.Sprintf(":%d", server.Port), nil)
 
 	return
-}
-
-func singleJoiningSlash(a, b string) string {
-	aslash := strings.HasSuffix(a, "/")
-	bslash := strings.HasPrefix(b, "/")
-	switch {
-	case aslash && bslash:
-		return a + b[1:]
-	case !aslash && !bslash:
-		return a + "/" + b
-	}
-	return a + b
 }
