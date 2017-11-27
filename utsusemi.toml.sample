@@ -1,0 +1,13 @@
+#port = 11080
+
+[[backend]]
+target = "http://httpstat.us/404"
+#ok = [200]
+
+[[backend]]
+target = "https://httpstat.us/404"
+#ok = [200]
+
+[[backend]]
+target = "https://httpstat.us/200"
+#ok = [200]
