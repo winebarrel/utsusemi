@@ -62,24 +62,25 @@ func NewServer(config *Config, logger *log.Logger) (server *Server, err error) {
 }
 
 func (server *Server) Run() (err error) {
-	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		backendLen := len(server.Backends)
+	backendLen := len(server.Backends)
 
-		for i, b := range server.Backends {
-			request.Host = b.URL.Host
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		for i := 0; i < backendLen; i++ {
+			backend := server.Backends[i]
+			request.Host = backend.URL.Host
 
 			if i < backendLen-1 {
 				preWriter := httptest.NewRecorder()
-				b.Proxy.ServeHTTP(preWriter, request)
+				backend.Proxy.ServeHTTP(preWriter, request)
 				server.logRequest(request, preWriter.Code)
 
-				if isResponseOk(preWriter, b.Ok) {
+				if isResponseOk(preWriter, backend.Ok) {
 					io.Copy(writer, preWriter.Body)
 					break
 				}
 			} else {
 				writerWithCode := NewResponseWriterWithCode(writer)
-				b.Proxy.ServeHTTP(writerWithCode, request)
+				backend.Proxy.ServeHTTP(writerWithCode, request)
 				server.logRequest(request, writerWithCode.Code)
 			}
 		}
