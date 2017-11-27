@@ -66,25 +66,21 @@ func (server *Server) Run() (err error) {
 		backendLen := len(server.Backends)
 
 		for i, b := range server.Backends {
-			proxy := b.Proxy
-			url := b.URL
+			request.Host = b.URL.Host
 
 			if i < backendLen-1 {
 				preWriter := httptest.NewRecorder()
-				preRequest := httptest.NewRequest(request.Method, request.RequestURI, request.Body)
-				preRequest.Host = url.Host
-				proxy.ServeHTTP(preWriter, preRequest)
-				server.logRequest(request, preRequest.Method, preRequest.Host, preWriter.Code)
+				b.Proxy.ServeHTTP(preWriter, request)
+				server.logRequest(request, preWriter.Code)
 
 				if isResponseOk(preWriter, b.Ok) {
 					io.Copy(writer, preWriter.Body)
 					break
 				}
 			} else {
-				request.Host = url.Host
 				writerWithCode := NewResponseWriterWithCode(writer)
-				proxy.ServeHTTP(writerWithCode, request)
-				server.logRequest(request, request.Method, request.Host, writerWithCode.Code)
+				b.Proxy.ServeHTTP(writerWithCode, request)
+				server.logRequest(request, writerWithCode.Code)
 			}
 		}
 	})
@@ -104,6 +100,6 @@ func isResponseOk(res *httptest.ResponseRecorder, okCodes []int) bool {
 	return false
 }
 
-func (server *Server) logRequest(origRequest *http.Request, method string, host string, code int) {
-	server.Logger.Printf("%s %s -> %s %s %d", origRequest.Method, origRequest.RequestURI, method, host, code)
+func (server *Server) logRequest(request *http.Request, code int) {
+	server.Logger.Printf("%s %s -> %s %s %d", request.Method, request.RequestURI, request.Method, request.Host, code)
 }
