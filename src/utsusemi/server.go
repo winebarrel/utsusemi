@@ -2,6 +2,7 @@ package utsusemi
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,15 @@ import (
 type ResponseWriterWithCode struct {
 	http.ResponseWriter
 	Code int
+}
+
+func NewResponseWriterWithCode(w http.ResponseWriter) *ResponseWriterWithCode {
+	return &ResponseWriterWithCode{w, http.StatusOK}
+}
+
+func (w *ResponseWriterWithCode) WriteHeader(code int) {
+	w.Code = code
+	w.ResponseWriter.WriteHeader(code)
 }
 
 type Backend struct {
@@ -53,43 +63,47 @@ func NewServer(config *Config, logger *log.Logger) (server *Server, err error) {
 
 func (server *Server) Run() (err error) {
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		origInfo := fmt.Sprintf("%s %s", request.Method, request.RequestURI)
-		server.Logger.Print(origInfo)
-
-		var proxy *httputil.ReverseProxy
-		var url *url.URL
 		backendLen := len(server.Backends)
 
-	ScanLoop:
 		for i, b := range server.Backends {
-			proxy = b.Proxy
-			url = b.URL
+			proxy := b.Proxy
+			url := b.URL
 
-			if i == backendLen-1 {
-				break ScanLoop
-			}
+			if i < backendLen-1 {
+				preWriter := httptest.NewRecorder()
+				preRequest := httptest.NewRequest(request.Method, request.RequestURI, request.Body)
+				preRequest.Host = url.Host
+				proxy.ServeHTTP(preWriter, preRequest)
+				server.logRequest(request, preRequest.Method, preRequest.Host, preWriter.Code)
 
-			preWriter := httptest.NewRecorder()
-			preRequest := httptest.NewRequest(http.MethodHead, request.RequestURI, request.Body)
-			preRequest.Host = url.Host
-			proxy.ServeHTTP(preWriter, preRequest)
-
-			server.Logger.Printf("%s -> %s %s %d", origInfo, preRequest.Method, preRequest.Host, preWriter.Code)
-
-			for _, ok := range b.Ok {
-				if preWriter.Code == ok {
-					break ScanLoop
+				if isResponseOk(preWriter, b.Ok) {
+					io.Copy(writer, preWriter.Body)
+					break
 				}
+			} else {
+				request.Host = url.Host
+				writerWithCode := NewResponseWriterWithCode(writer)
+				proxy.ServeHTTP(writerWithCode, request)
+				server.logRequest(request, request.Method, request.Host, writerWithCode.Code)
 			}
 		}
-
-		request.Host = url.Host
-		proxy.ServeHTTP(writer, request)
-
-		server.Logger.Printf("%s -> %s %s", origInfo, request.Method, request.Host)
 	})
 
 	err = http.ListenAndServe(fmt.Sprintf(":%d", server.Port), nil)
 
 	return
+}
+
+func isResponseOk(res *httptest.ResponseRecorder, okCodes []int) bool {
+	for _, ok := range okCodes {
+		if res.Code == ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (server *Server) logRequest(origRequest *http.Request, method string, host string, code int) {
+	server.Logger.Printf("%s %s -> %s %s %d", origRequest.Method, origRequest.RequestURI, method, host, code)
 }
