@@ -2,10 +2,6 @@
 /*.gz
 .DS_Store
 *.toml
-/debian/utsusemi.debhelper.log
-/debian/utsusemi.substvars
-/debian/utsusemi/
-/debian/files
 /pkg/utsusemi*
 .DS_Store
 /tmp/

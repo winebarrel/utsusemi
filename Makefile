@@ -6,9 +6,7 @@ GOARCH         := $(shell go env GOARCH)
 RUNTIME_GOPATH := $(GOPATH):$(shell pwd)
 TEST_SRC       := $(wildcard src/*/*_test.go) $(wildcard src/*/test_*.go)
 SRC            := $(filter-out $(TEST_SRC),$(wildcard src/*/*.go))
-
-UBUNTU_IMAGE          := docker-go-pkg-build-ubuntu
-UBUNTU_CONTAINER_NAME := docker-go-pkg-build-ubuntu-$(shell date +%s)
+GOLANG_TAG     := 1.9.2
 
 .PHONY: all
 all: $(PROGRAM)
@@ -20,6 +18,7 @@ go-get:
 $(PROGRAM): $(SRC)
 ifeq ($(GOOS),linux)
 	GOPATH=$(RUNTIME_GOPATH) CGO_ENABLED=0 go build -ldflags "-X utsusemi.version=$(VERSION)" -a -tags netgo -installsuffix netgo -o $(PROGRAM)
+	[[ "`ldd $(PROGRAM)`" =~ "not a dynamic executable" ]] || exit 1
 else
 	GOPATH=$(RUNTIME_GOPATH) CGO_ENABLED=0 go build -ldflags "-X utsusemi.version=$(VERSION)" -o $(PROGRAM)
 endif
@@ -39,12 +38,6 @@ package: clean test $(PROGRAM)
 
 .PHONY: package/linux
 package/linux:
-	docker run \
-	  --name $(UBUNTU_CONTAINER_NAME) \
-	  -v $(shell pwd):/tmp/src $(UBUNTU_IMAGE) \
+	docker run --rm -v $(shell pwd):/tmp/src golang:$(GOLANG_TAG) \
 	  make -C /tmp/src go-get package
-	docker rm $(UBUNTU_CONTAINER_NAME)
 
-.PHONY: docker/build/ubuntu
-docker/build/ubuntu: etc/Dockerfile.ubuntu
-	docker build -f etc/Dockerfile.ubuntu -t $(UBUNTU_IMAGE) .
