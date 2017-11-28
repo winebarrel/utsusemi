@@ -64,6 +64,10 @@ func NewServer(config *Config, logger *log.Logger) (server *Server, err error) {
 func (server *Server) Run() (err error) {
 	backendLen := len(server.Backends)
 
+	http.HandleFunc("/ping", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprintf(writer, "pong")
+	})
+
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		for i := 0; i < backendLen; i++ {
 			backend := server.Backends[i]

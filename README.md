@@ -12,6 +12,7 @@ make
 ./utsusemi
 ```
 ```sh
+curl localhost:11080/ping
 curl localhost:11080
 ```
 
