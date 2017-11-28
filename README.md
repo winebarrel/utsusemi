@@ -8,6 +8,7 @@ When the first backend returns 404, it goes to the next backend. If the next bac
 
 ```sh
 cp utsusemi.toml.sample utsusemi.toml
+make go-get
 make
 ./utsusemi
 ```
