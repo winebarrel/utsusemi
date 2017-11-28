@@ -5,9 +5,9 @@ target = "http://httpstat.us/404"
 #ok = [200]
 
 [[backend]]
-target = "https://httpstat.us/404"
+target = "https://www.google.co.jp"
 #ok = [200]
 
 [[backend]]
-target = "https://httpstat.us/200"
+target = "https://s.yimg.jp"
 #ok = [200]

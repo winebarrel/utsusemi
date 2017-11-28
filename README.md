@@ -14,7 +14,8 @@ make
 ```
 ```sh
 curl localhost:11080/ping
-curl localhost:11080
+open http://localhost:11080/images/top/sp2/cmn/logo-170307.png
+open http://localhost:11080/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png
 ```
 
 ## Configuration
@@ -27,10 +28,10 @@ target = "http://httpstat.us/404"
 #ok = [200]
 
 [[backend]]
-target = "https://httpstat.us/404"
+target = "https://www.google.co.jp"
 #ok = [200]
 
 [[backend]]
-target = "https://httpstat.us/200"
+target = "https://s.yimg.jp"
 #ok = [200]
 ```
